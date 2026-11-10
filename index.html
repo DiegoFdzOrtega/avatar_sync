@@ -3,133 +3,646 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interfaz natural: tu cara controla al personaje</title>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+  <title>AvatarSync · Interfaz natural de usuario</title>
+  <meta name="description" content="Un personaje anime que se controla con la cara, las manos, el cuerpo y la voz.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M9 22 16 8l7 14h-4l-3-6-3 6z' fill='white'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    /* =================== Variables del tema =================== */
+    :root {
+      --fondo: #0a0718;
+      --panel: rgba(255, 255, 255, 0.035);
+      --panel-solido: #141030;
+      --borde: rgba(167, 139, 250, 0.16);
+      --borde-fuerte: rgba(167, 139, 250, 0.35);
+      --texto: #eeeaff;
+      --texto-suave: #a39cc4;
+      --violeta: #8b5cf6;
+      --cian: #22d3ee;
+      --oro: #fbbf24;
+      --rosa: #f472b6;
+      --verde: #34d399;
+      --rojo: #f43f5e;
+      --radio: 16px;
+      --titulo: 'Chakra Petch', system-ui, sans-serif;
+      --cuerpo: 'Inter', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      padding: 20px;
-      background: #100c22;
-      color: #f2eefc;
-      font-family: system-ui, sans-serif;
-      text-align: center;
+      min-height: 100vh;
+      background:
+        radial-gradient(900px 500px at 10% -10%, rgba(139, 92, 246, 0.22), transparent 60%),
+        radial-gradient(800px 500px at 100% 0%, rgba(34, 211, 238, 0.14), transparent 60%),
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px) 0 0 / 40px 40px,
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px) 0 0 / 40px 40px,
+        var(--fondo);
+      color: var(--texto);
+      font: 15px/1.5 var(--cuerpo);
     }
-    h1 { font-size: 24px; margin: 0 0 14px; }
+    .contenedor { max-width: 1180px; margin: 0 auto; padding: 22px 20px 40px; }
 
-    .paneles {
+    /* =================== Cabecera =================== */
+    .cabecera {
       display: flex;
-      gap: 24px;
-      justify-content: center;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
       flex-wrap: wrap;
-      max-width: 1100px;
-      margin: 0 auto;
+      margin-bottom: 18px;
     }
-    .panel { width: 480px; max-width: 95vw; }
-    h2 { font-size: 15px; font-weight: normal; opacity: 0.75; margin: 0 0 8px; }
-
-    .marco {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 4 / 3;
+    .marca { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 48px; height: 48px;
       border-radius: 14px;
-      overflow: hidden;
-      background: #000;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--violeta), var(--cian));
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.55);
     }
-    video, #puntos {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+    .logo svg { width: 26px; height: 26px; }
+    h1 {
+      margin: 0;
+      font: 700 30px/1 var(--titulo);
+      letter-spacing: 0.5px;
     }
-    video { object-fit: cover; transform: scaleX(-1); }
-    #puntos { transform: scaleX(-1); pointer-events: none; }
+    h1 span {
+      background: linear-gradient(90deg, var(--violeta), var(--cian));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .subtitulo { margin: 4px 0 0; color: var(--texto-suave); font-size: 13px; }
 
-    #personaje {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 14px;
-      background: radial-gradient(circle at 50% 40%, #3a2a6b, #120d26);
-      display: block;
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 12.5px;
+      color: var(--texto-suave);
+      transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    .chip b { color: var(--texto); font-weight: 600; }
+    .chip::before {
+      content: '';
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4a4470;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .chip.on { border-color: rgba(52, 211, 153, 0.5); color: var(--texto); }
+    .chip.on::before { background: var(--verde); box-shadow: 0 0 8px var(--verde); }
+
+    /* =================== Barra de herramientas =================== */
+    .barra {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+      backdrop-filter: blur(8px);
+      margin-bottom: 18px;
+    }
+    .grupo { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .grupo + .grupo { padding-left: 10px; border-left: 1px solid var(--borde); }
+    .grupo-titulo {
+      font: 600 10.5px var(--titulo);
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: var(--texto-suave);
+      margin-right: 2px;
     }
 
     button {
-      background: #7c4dff;
-      color: #fff;
-      border: 0;
-      border-radius: 10px;
-      padding: 11px 20px;
-      font-size: 15px;
+      font: 500 14px var(--cuerpo);
+      color: var(--texto);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--borde);
+      border-radius: 11px;
+      padding: 9px 14px;
       cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
     }
-    button:disabled { opacity: 0.5; cursor: default; }
+    button:hover:not(:disabled) { background: rgba(139, 92, 246, 0.16); border-color: var(--borde-fuerte); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button:focus-visible { outline: 2px solid var(--cian); outline-offset: 2px; }
+    button.activo {
+      background: rgba(34, 211, 238, 0.14);
+      border-color: var(--cian);
+      box-shadow: 0 0 14px rgba(34, 211, 238, 0.35), inset 0 0 10px rgba(34, 211, 238, 0.12);
+    }
+    button.grabando {
+      background: rgba(244, 63, 94, 0.18);
+      border-color: var(--rojo);
+      animation: latido 1s infinite;
+    }
+    @keyframes latido { 50% { box-shadow: 0 0 18px rgba(244, 63, 94, 0.6); } }
+    .principal {
+      font: 600 16px var(--titulo);
+      letter-spacing: 0.5px;
+      padding: 13px 26px;
+      border: 0;
+      background: linear-gradient(135deg, var(--violeta), #6d28d9 45%, var(--cian));
+      box-shadow: 0 6px 24px rgba(139, 92, 246, 0.45);
+    }
+    .principal:hover:not(:disabled) { box-shadow: 0 6px 30px rgba(34, 211, 238, 0.5); }
+    .sobre-mano { outline: 3px solid var(--oro) !important; outline-offset: 3px; }
 
-    #estado {
-      margin: 16px auto 4px;
-      padding: 10px 14px;
-      max-width: 1000px;
-      background: #1b1538;
-      border-radius: 10px;
+    /* =================== Escenario (cámara + personaje) =================== */
+    .escenario { display: grid; grid-template-columns: 4fr 3fr; gap: 18px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: calc(var(--radio) + 4px);
+      padding: 10px;
+    }
+    .panel-cab {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 2px 6px 10px;
+      font: 600 13px var(--titulo);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+    }
+    .panel-cab .dato { font: 500 12px var(--mono); text-transform: none; letter-spacing: 0; }
+    .vivo { display: inline-flex; align-items: center; gap: 8px; }
+    .vivo::before {
+      content: ''; width: 8px; height: 8px; border-radius: 50%;
+      background: #4a4470;
+    }
+    body.camara-activa .vivo::before { background: var(--rojo); box-shadow: 0 0 8px var(--rojo); animation: latido 1.5s infinite; }
+
+    .marco {
+      position: relative;
+      border-radius: var(--radio);
+      overflow: hidden;
+      background: #000;
+    }
+    .marco.camara { aspect-ratio: 4 / 3; }
+    video, #puntos { position: absolute; inset: 0; width: 100%; height: 100%; }
+    video { object-fit: cover; transform: scaleX(-1); }
+    #puntos { object-fit: cover; transform: scaleX(-1); pointer-events: none; }
+    #personaje { display: block; width: 100%; aspect-ratio: 1 / 1; }
+
+    /* Esquinas tipo visor (HUD) */
+    .esq { position: absolute; width: 22px; height: 22px; border: 2px solid var(--cian); z-index: 3; pointer-events: none; opacity: 0.8; }
+    .esq.a { top: 10px; left: 10px; border-right: 0; border-bottom: 0; border-top-left-radius: 6px; }
+    .esq.b { top: 10px; right: 10px; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
+    .esq.c { bottom: 10px; left: 10px; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
+    .esq.d { bottom: 10px; right: 10px; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+
+    /* Portada que tapa la cámara hasta que se inicia */
+    .portada {
+      position: absolute; inset: 0; z-index: 4;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 24px; text-align: center;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(139, 92, 246, 0.35), transparent 65%),
+        linear-gradient(180deg, #120d2e, #08061a);
+    }
+    .portada .icono-grande {
+      width: 84px; height: 84px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 38px;
+      border: 1px solid var(--borde-fuerte);
+      background: rgba(139, 92, 246, 0.12);
+      box-shadow: 0 0 40px rgba(139, 92, 246, 0.35);
+      animation: flotar 3s ease-in-out infinite;
+    }
+    @keyframes flotar { 50% { transform: translateY(-6px); } }
+    .portada h2 { margin: 0; font: 700 22px var(--titulo); }
+    .portada p { margin: 0; color: var(--texto-suave); max-width: 380px; font-size: 14px; }
+    .portada small { color: var(--texto-suave); font-size: 12px; opacity: 0.8; }
+    body.camara-activa .portada { display: none; }
+
+    /* Marcador del minijuego */
+    .marcador {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 5;
+      background: rgba(10, 7, 24, 0.8);
+      border: 1px solid rgba(251, 191, 36, 0.5);
+      color: var(--oro);
+      font: 700 18px var(--titulo);
+      padding: 6px 16px;
+      border-radius: 999px;
+      white-space: pre;
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.3);
+    }
+    .marcador[hidden] { display: none; }
+
+    /* Cursor que sigue el dedo índice */
+    .cursor-mano {
+      position: fixed; left: -15px; top: -15px;
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 3px solid var(--oro);
+      background: rgba(251, 191, 36, 0.2);
+      box-shadow: 0 0 14px var(--oro);
+      pointer-events: none; z-index: 1000;
+      transition: background 0.1s;
+    }
+    .cursor-mano.pulsado { background: var(--oro); }
+    .cursor-mano[hidden] { display: none; }
+
+    /* =================== Estado y medidores =================== */
+    .estado {
+      display: flex; align-items: center; gap: 10px;
+      margin: 18px 0 0;
+      padding: 11px 16px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-left: 3px solid var(--violeta);
+      border-radius: 12px;
       font-size: 14px;
     }
-    #datos { font: 12px monospace; opacity: 0.6; margin: 0 0 16px; }
+    .estado::before { content: 'ℹ'; font-weight: 700; color: var(--violeta); }
+
+    .telemetria {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px 16px;
+      margin-top: 12px;
+      padding: 14px 16px 10px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+    }
+    .medidor { font-size: 12px; color: var(--texto-suave); }
+    .medidor span { display: block; margin-bottom: 5px; }
+    .barra-medidor {
+      position: relative; height: 7px; border-radius: 99px;
+      background: rgba(255, 255, 255, 0.07); overflow: hidden;
+    }
+    /* El ancho (y, en los centrados, la posición) de la barra los pone app.js */
+    .barra-medidor i {
+      position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--violeta), var(--cian));
+      transition: width 0.08s linear, left 0.08s linear;
+    }
+    /* Medidores con el cero en el centro (giro, inclinación, ladeo) */
+    .barra-medidor.centro::after {
+      content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: rgba(255, 255, 255, 0.3);
+    }
+    #datos {
+      grid-column: 1 / -1;
+      margin: 2px 0 0;
+      font: 11px var(--mono);
+      color: var(--texto-suave);
+      opacity: 0.7;
+      min-height: 1em;
+    }
+
+    /* =================== Tarjetas inferiores =================== */
+    .rejilla {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr 0.9fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .tarjeta {
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+      padding: 16px 18px;
+    }
+    .tarjeta h3 {
+      display: flex; align-items: center; gap: 8px;
+      margin: 0 0 4px;
+      font: 600 15px var(--titulo);
+      letter-spacing: 0.5px;
+    }
+    .tarjeta .ayuda { margin: 0 0 12px; font-size: 12.5px; color: var(--texto-suave); }
+
+    .oido {
+      min-height: 38px;
+      margin: 0 0 12px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px dashed var(--borde);
+      font-style: italic;
+      color: var(--texto-suave);
+      font-size: 13.5px;
+    }
+    .oido:empty::before { content: 'Aquí aparecerá lo que digas…'; opacity: 0.6; }
+
+    .comandos { display: flex; flex-wrap: wrap; gap: 6px; }
+    .comandos button {
+      font: 500 12.5px var(--mono);
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .gestos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .gesto {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12.5px;
+      line-height: 1.3;
+    }
+    .gesto .ico { font-size: 22px; flex: none; width: 28px; text-align: center; }
+    .gesto b { display: block; font-weight: 600; font-size: 13px; }
+    .gesto small { color: var(--texto-suave); }
+
+    #registro { list-style: none; margin: 0; padding: 0; max-height: 330px; overflow: auto; }
+    #registro li {
+      display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 6px;
+      padding: 7px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+      animation: entrar 0.3s ease;
+    }
+    #registro li small { font: 11px var(--mono); color: var(--texto-suave); }
+    #registro:empty::before { content: 'Todavía no se ha detectado nada.'; color: var(--texto-suave); font-size: 13px; }
+    @keyframes entrar { from { opacity: 0; transform: translateX(-6px); } }
+
+    /* =================== Ajustes (plegables) =================== */
+    .ajustes-panel {
+      margin-top: 18px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+    }
+    .ajustes-panel summary {
+      cursor: pointer;
+      padding: 14px 18px;
+      font: 600 15px var(--titulo);
+      letter-spacing: 0.5px;
+      list-style: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .ajustes-panel summary::-webkit-details-marker { display: none; }
+    .ajustes-panel summary::after { content: '▾'; margin-left: auto; transition: transform 0.2s; color: var(--texto-suave); }
+    .ajustes-panel[open] summary::after { transform: rotate(180deg); }
+    .ajustes-panel summary small { font: 400 12.5px var(--cuerpo); color: var(--texto-suave); letter-spacing: 0; }
 
     .ajustes {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 14px 24px;
-      max-width: 1000px;
-      margin: 0 auto;
-      text-align: left;
-      background: #1b1538;
-      padding: 16px 20px;
-      border-radius: 12px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: start;
+      padding: 0 18px 18px;
     }
-    .ajustes label { display: block; font-size: 14px; }
-    .ajustes input[type=range] { width: 100%; }
-    .ajustes .casilla { display: flex; align-items: center; gap: 8px; }
-    .ajustes .boton-fila { grid-column: 1 / -1; text-align: center; }
+    .ajustes fieldset {
+      margin: 0;
+      padding: 12px 14px 14px;
+      border: 1px solid var(--borde);
+      border-radius: 12px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .ajustes legend { padding: 0 6px; font: 600 12px var(--titulo); text-transform: uppercase; letter-spacing: 1.2px; color: var(--cian); }
+    .ajustes label { display: block; font-size: 13px; color: var(--texto-suave); }
+    .ajustes label b { float: right; color: var(--texto); font: 500 12px var(--mono); }
+    .ajustes .casilla { display: flex; align-items: center; gap: 9px; color: var(--texto); cursor: pointer; }
+    .acciones-ajustes { grid-column: 1 / -1; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+    input[type=range] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px; margin-top: 8px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--cian);
+      box-shadow: 0 0 8px var(--cian);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 16px; height: 16px; border: 0; border-radius: 50%;
+      background: var(--cian);
+    }
+    input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--violeta); }
+
+    footer {
+      margin-top: 26px;
+      text-align: center;
+      color: var(--texto-suave);
+      font-size: 12.5px;
+    }
+    footer a { color: var(--cian); text-decoration: none; }
+
+    /* =================== Adaptación a pantallas pequeñas =================== */
+    @media (max-width: 980px) {
+      .escenario { grid-template-columns: 1fr; }
+      .rejilla { grid-template-columns: 1fr; }
+      .ajustes { grid-template-columns: 1fr; }
+      .grupo + .grupo { border-left: 0; padding-left: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
   </style>
 </head>
 <body>
-  <h1>Interfaz natural: tu cara controla al personaje</h1>
-  <button id="btn" disabled>Iniciar cámara</button>
+  <div class="contenedor">
 
-  <div class="paneles" style="margin-top:16px">
-    <section class="panel">
-      <h2>Tu cara</h2>
-      <div class="marco">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="puntos"></canvas>
+    <!-- ========== Cabecera ========== -->
+    <header class="cabecera">
+      <div class="marca">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 19 12 4l7 15h-3.5L12 11.5 8.5 19z" fill="#fff"/></svg>
+        </div>
+        <div>
+          <h1>Avatar<span>Sync</span></h1>
+          <p class="subtitulo">Tu cara, tus manos, tu cuerpo y tu voz controlan al personaje · sin ratón ni teclado</p>
+        </div>
       </div>
+      <div class="chips" aria-live="polite">
+        <span class="chip" id="chipCara">Cara <b>no</b></span>
+        <span class="chip" id="chipManos">Manos <b>0</b></span>
+        <span class="chip" id="chipCuerpo">Cuerpo <b>no</b></span>
+        <span class="chip" id="chipVoz">Voz <b>apagada</b></span>
+        <span class="chip" id="chipAR">AR <b>apagada</b></span>
+      </div>
+    </header>
+
+    <!-- ========== Barra de herramientas ========== -->
+    <nav class="barra" aria-label="Controles">
+      <div class="grupo">
+        <span class="grupo-titulo">Entrada</span>
+        <button id="btnVoz">🎤 Activar voz</button>
+        <button id="btnCursor" disabled>👆 Cursor con la mano</button>
+      </div>
+      <div class="grupo">
+        <span class="grupo-titulo">Realidad aumentada</span>
+        <button id="btnAR" disabled>🎭 Máscara AR</button>
+        <button id="btnJuego" disabled>⭐ Juego</button>
+      </div>
+      <div class="grupo">
+        <span class="grupo-titulo">Capturar</span>
+        <button id="btnFoto" disabled>📸 Foto</button>
+        <button id="btnGrabar" disabled>⏺ Grabar</button>
+      </div>
+    </nav>
+    <div id="cursorMano" class="cursor-mano" hidden></div>
+
+    <!-- ========== Escenario ========== -->
+    <main class="escenario">
+      <section class="panel" aria-label="Cámara con realidad aumentada">
+        <div class="panel-cab">
+          <span class="vivo">Cámara · Realidad aumentada</span>
+          <span class="dato" id="fpsTxt">— det/s</span>
+        </div>
+        <div class="marco camara">
+          <div id="marcador" class="marcador" hidden></div>
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="puntos"></canvas>
+          <span class="esq a"></span><span class="esq b"></span><span class="esq c"></span><span class="esq d"></span>
+
+          <div class="portada" id="portada">
+            <div class="icono-grande" aria-hidden="true">🎭</div>
+            <h2>Dale vida a tu avatar</h2>
+            <p>La cámara detecta tu cara, tus manos y tu cuerpo, y el micrófono entiende tu voz. Todo se procesa en tu navegador.</p>
+            <button id="btn" class="principal" disabled>📷 Iniciar cámara</button>
+            <small>Usa Chrome o Edge · hace falta conexión a Internet para descargar los modelos</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Personaje">
+        <div class="panel-cab">
+          <span>Personaje</span>
+          <span class="dato">fondo: <b id="fondoTxt">noche</b></span>
+        </div>
+        <div class="marco">
+          <canvas id="personaje" width="512" height="512"></canvas>
+          <span class="esq a"></span><span class="esq b"></span><span class="esq c"></span><span class="esq d"></span>
+        </div>
+      </section>
+    </main>
+
+    <p id="estado" class="estado" role="status">Cargando...</p>
+
+    <!-- ========== Medidores en vivo ========== -->
+    <section class="telemetria" aria-label="Medidores de detección">
+      <div class="medidor"><span>Giro</span><div class="barra-medidor centro" id="mGiro"><i></i></div></div>
+      <div class="medidor"><span>Arriba / abajo</span><div class="barra-medidor centro" id="mInclinacion"><i></i></div></div>
+      <div class="medidor"><span>Ladeo</span><div class="barra-medidor centro" id="mLadeo"><i></i></div></div>
+      <div class="medidor"><span>Ojo izquierdo</span><div class="barra-medidor" id="mOjoI"><i></i></div></div>
+      <div class="medidor"><span>Ojo derecho</span><div class="barra-medidor" id="mOjoD"><i></i></div></div>
+      <div class="medidor"><span>Boca</span><div class="barra-medidor" id="mBoca"><i></i></div></div>
+      <div class="medidor"><span>Sonrisa</span><div class="barra-medidor" id="mSonrisa"><i></i></div></div>
+      <p id="datos"></p>
     </section>
 
-    <section class="panel">
-      <h2>Personaje</h2>
-      <canvas id="personaje" width="512" height="512"></canvas>
+    <!-- ========== Voz, gestos y registro ========== -->
+    <section class="rejilla">
+      <article class="tarjeta">
+        <h3>🎤 Comandos de voz</h3>
+        <p class="ayuda">Activa la voz y di una de estas palabras. También puedes pulsarlas para probarlas.</p>
+        <p id="oido" class="oido"></p>
+        <div class="comandos">
+          <button data-cmd="hola">hola</button>
+          <button data-cmd="quien eres">quién eres</button>
+          <button data-cmd="chiste">chiste</button>
+          <button data-cmd="ayuda">ayuda</button>
+          <button data-cmd="mascara">máscara</button>
+          <button data-cmd="juego">juego</button>
+          <button data-cmd="cursor">cursor</button>
+          <button data-cmd="fondo">fondo</button>
+          <button data-cmd="poder">poder</button>
+          <button data-cmd="brillos">brillos</button>
+          <button data-cmd="foto">foto</button>
+          <button data-cmd="grabar">grabar</button>
+          <button data-cmd="parar">parar</button>
+          <button data-cmd="calibrar">calibrar</button>
+          <button data-cmd="puntos">puntos</button>
+          <button data-cmd="efectos">efectos</button>
+        </div>
+      </article>
+
+      <article class="tarjeta">
+        <h3>✋ Gestos y movimientos</h3>
+        <p class="ayuda">Mantén el gesto un momento para que cuente.</p>
+        <div class="gestos">
+          <div class="gesto"><span class="ico">🙂</span><div><b>Mover la cabeza</b><small>El personaje te imita</small></div></div>
+          <div class="gesto"><span class="ico">👁️</span><div><b>Parpadear y hablar</b><small>Copia tus ojos y tu boca</small></div></div>
+          <div class="gesto"><span class="ico">😉</span><div><b>Guiño</b><small>Lluvia de estrellas</small></div></div>
+          <div class="gesto"><span class="ico">😄</span><div><b>Sonrisa grande</b><small>Corazones</small></div></div>
+          <div class="gesto"><span class="ico">✋</span><div><b>Mano abierta</b><small>Te saluda</small></div></div>
+          <div class="gesto"><span class="ico">👍</span><div><b>Pulgar arriba</b><small>«¡GENIAL!»</small></div></div>
+          <div class="gesto"><span class="ico">✌️</span><div><b>Paz</b><small>Cambia el fondo</small></div></div>
+          <div class="gesto"><span class="ico">✊</span><div><b>Puño</b><small>«¡PUM!» y temblor</small></div></div>
+          <div class="gesto"><span class="ico">🙌</span><div><b>Brazos arriba</b><small>Aura de poder</small></div></div>
+          <div class="gesto"><span class="ico">↔️</span><div><b>Moverte de lado</b><small>El personaje se desplaza</small></div></div>
+          <div class="gesto"><span class="ico">🤏</span><div><b>Pellizco</b><small>Clic en modo cursor</small></div></div>
+          <div class="gesto"><span class="ico">⭐</span><div><b>Tocar estrellas</b><small>Puntos en el juego</small></div></div>
+        </div>
+      </article>
+
+      <article class="tarjeta">
+        <h3>📋 Registro</h3>
+        <p class="ayuda">Todo lo que la aplicación va detectando.</p>
+        <ul id="registro"></ul>
+      </article>
     </section>
-  </div>
 
-  <p id="estado">Cargando...</p>
-  <p id="datos"></p>
+    <!-- ========== Ajustes ========== -->
+    <details class="ajustes-panel">
+      <summary>⚙️ Ajustes <small>sensibilidad, boca, máscara y efectos · se guardan solos</small></summary>
+      <div class="ajustes">
+        <fieldset>
+          <legend>Cabeza</legend>
+          <label>Giro lateral <b id="vG"></b>
+            <input id="sG" type="range" min="0" max="20" step="0.5"></label>
+          <label>Bajar la cabeza <b id="vA"></b>
+            <input id="sA" type="range" min="0" max="40" step="0.5"></label>
+          <label>Subir la cabeza <b id="vU"></b>
+            <input id="sU" type="range" min="0" max="80" step="0.5"></label>
+          <label>Zona muerta lateral <b id="vZG"></b>
+            <input id="sZG" type="range" min="0" max="0.2" step="0.005"></label>
+          <label>Zona muerta vertical <b id="vZV"></b>
+            <input id="sZV" type="range" min="0" max="0.2" step="0.005"></label>
+          <label class="casilla"><input id="iV" type="checkbox"> Invertir subir y bajar</label>
+          <label class="casilla"><input id="iLadeo" type="checkbox"> Ladear el personaje con la cabeza</label>
+        </fieldset>
 
-  <div class="ajustes">
-    <label>Giro lateral: <b id="vG"></b>
-      <input id="sG" type="range" min="0" max="20" step="0.5"></label>
-    <label>Bajar la cabeza: <b id="vA"></b>
-      <input id="sA" type="range" min="0" max="40" step="0.5"></label>
-    <label>Subir la cabeza: <b id="vU"></b>
-      <input id="sU" type="range" min="0" max="80" step="0.5"></label>
-    <label class="casilla"><input id="iV" type="checkbox" checked> Invertir subir y bajar</label>
-    <label>Zona muerta lateral: <b id="vZG"></b>
-      <input id="sZG" type="range" min="0" max="0.2" step="0.005"></label>
-    <label>Zona muerta vertical: <b id="vZV"></b>
-      <input id="sZV" type="range" min="0" max="0.2" step="0.005"></label>
-    <label>Umbral de voz: <b id="vS"></b>
-      <input id="sS" type="range" min="0.0005" max="0.05" step="0.0005"></label>
-    <div class="boton-fila">
-      <button id="btnCal">Calibrar (mírate de frente 2 s)</button>
-    </div>
+        <fieldset>
+          <legend>Boca</legend>
+          <label>Apertura mínima de la boca <b id="vB"></b>
+            <input id="sB" type="range" min="0.02" max="0.5" step="0.01"></label>
+          <label class="casilla"><input id="iMic" type="checkbox"> Mover la boca con el volumen del micro</label>
+          <label>Umbral de volumen del micro <b id="vS"></b>
+            <input id="sS" type="range" min="0.0005" max="0.05" step="0.0005"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Realidad aumentada y efectos</legend>
+          <label>Tamaño de la máscara <b id="vM"></b>
+            <input id="sM" type="range" min="1" max="4" step="0.1"></label>
+          <label>Altura de la máscara <b id="vMA"></b>
+            <input id="sMA" type="range" min="-0.4" max="0.4" step="0.01"></label>
+          <label class="casilla"><input id="iPuntos" type="checkbox"> Mostrar puntos y esqueletos</label>
+          <label class="casilla"><input id="iEfectos" type="checkbox"> Efectos visuales</label>
+        </fieldset>
+
+        <div class="acciones-ajustes">
+          <button id="btnCal">🎯 Calibrar (mírate de frente 2 s)</button>
+          <button id="btnReset">↺ Restablecer ajustes</button>
+        </div>
+      </div>
+    </details>
+
+    <footer>
+      AvatarSync · Diego Fernández Ortega · 2.º DAM · 0488 Desarrollo de interfaces ·
+      MediaPipe Tasks Vision · Web Speech API
+    </footer>
   </div>
 
   <script src="app.js"></script>
